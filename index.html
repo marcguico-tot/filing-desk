@@ -474,8 +474,12 @@
           render();
           return;
         }
-        if(data.clients && data.clients.length){ STATE.clients = data.clients; }
-        if(data.log){ STATE.deliverables = data.log.slice().reverse(); }
+        // Once connected, the Sheet is the source of truth — including when it's
+        // legitimately empty. Previously an empty FD_Clients tab silently left the
+        // bundled sample clients in place, which reads as "my real clients" and
+        // is misleading. Always trust what the Sheet returned.
+        STATE.clients = data.clients || [];
+        STATE.deliverables = (data.log || []).slice().reverse();
         VIEW.sheetsConnected = true;
         VIEW.freescoutEnabled = !!data.freescoutEnabled;
         if(showBanner){ VIEW.banner = { type:"good", text:"Synced with Google Sheets — " + STATE.clients.length + " clients, " + STATE.deliverables.length + " logged deliverables." }; }
@@ -616,6 +620,7 @@
     if(!HAS_RUNTIME){
       if(VIEW.sheetsConnected){
         right.push(el("button",{class:"badge badge-connected badge-btn", onclick:function(){ VIEW.settingsOpen = true; render(); }},["✓ Connected to Sheets"]));
+        right.push(el("button",{class:"icon-btn", title:"Refresh from Google Sheets — pulls in any changes made directly in the sheet", "aria-label":"Refresh from Google Sheets", disabled: VIEW.sheetsSyncing, onclick:function(){ syncFromSheets(true); }},[VIEW.sheetsSyncing ? "…" : "⟳"]));
       } else if(VIEW.demoMode){
         right.push(el("button",{class:"badge badge-demo badge-btn", title:"Click to connect this build to a Google Sheet.", onclick:function(){ VIEW.settingsOpen = true; render(); }},["Demo mode — not saved"]));
       }
@@ -766,7 +771,9 @@
       el("div",{class:"section-head"},[ el("h2",{},["Client & deliverable"]) ]),
       el("div",{class:"grid3"},[
         el("div",{class:"field"},[ el("label",{},["Client ", el("span",{class:"req"},["*"])]), clientSelect,
-          client ? el("span",{class:"help-text"},[client.platform + " · account " + client.ref]) : null
+          client ? el("span",{class:"help-text"},[client.platform + " · account " + client.ref])
+            : (VIEW.sheetsConnected && STATE.clients.length === 0) ? el("span",{class:"error-text"},["No clients found in FD_Clients yet — add a row per client in the Sheet, then reopen Settings and reconnect."])
+            : null
         ]),
         el("div",{class:"field"},[ el("label",{},["Included in this delivery ", el("span",{class:"req"},["*"])]),
           client ? el("div",{class:"type-check-row"}, typeButtons) : el("span",{class:"help-text"},["Choose a client first"])
