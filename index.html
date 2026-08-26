@@ -574,6 +574,21 @@
 
   function render(){
     var app = document.getElementById("app");
+
+    // Rebuilding the whole tree below (app.innerHTML = "") destroys whatever
+    // input is currently focused, which drops the cursor AND — because the
+    // page's scroll height briefly collapses to ~0 while empty — can snap
+    // the page back to the top. Capture focus + cursor + scroll position
+    // first, then restore them once the new tree is in place.
+    var active = document.activeElement;
+    var focusKey = active && active.getAttribute && active.getAttribute("data-focus-key");
+    var selStart = null, selEnd = null;
+    if(focusKey && typeof active.selectionStart === "number"){
+      selStart = active.selectionStart;
+      selEnd = active.selectionEnd;
+    }
+    var scrollY = window.scrollY;
+
     app.innerHTML = "";
     app.appendChild(renderTopbar());
     if(VIEW.banner){ app.appendChild(renderBanner()); }
@@ -583,6 +598,17 @@
     if(VIEW.confirmModal){ app.appendChild(renderConfirmModal()); }
     if(VIEW.detailModal){ app.appendChild(renderDetailModal()); }
     if(VIEW.settingsOpen){ app.appendChild(renderSettingsModal()); }
+
+    if(focusKey){
+      var next = app.querySelector('[data-focus-key="' + focusKey + '"]');
+      if(next){
+        next.focus();
+        if(selStart !== null && next.setSelectionRange){
+          try{ next.setSelectionRange(selStart, selEnd); }catch(e){}
+        }
+      }
+    }
+    window.scrollTo(0, scrollY);
   }
 
   function renderTopbar(){
@@ -823,7 +849,7 @@
           el("label",{},["Message ", el("span",{class:"req"},["*"])]),
           el("button",{class:"link-btn", type:"button", onclick:function(e){ copyText(f.message, e.currentTarget); }},[ f.copyFeedback === "ok" ? "Copied ✓" : f.copyFeedback === "fail" ? "Couldn't copy — select & copy manually" : "Copy message" ])
         ]),
-        el("textarea",{class:"input", rows:5, oninput:function(e){ f.message = e.target.value; render(); }},[f.message])
+        el("textarea",{class:"input", rows:5, "data-focus-key":"message", oninput:function(e){ f.message = e.target.value; render(); }},[f.message])
       ])
     ]);
   }
@@ -866,10 +892,10 @@
       el("div",{class:"section-head"},[ el("h2",{},["Recipient"]) ]),
       el("div",{class:"grid2"},[
         el("div",{class:"field"},[ el("label",{},["Contact name ", el("span",{class:"req"},["*"])]),
-          el("input",{class:"input", placeholder:"e.g. Streamline Vape — Compliance", value:f.recipientName, oninput:function(e){ f.recipientName = e.target.value; render(); }})
+          el("input",{class:"input", placeholder:"e.g. Streamline Vape — Compliance", value:f.recipientName, "data-focus-key":"recipientName", oninput:function(e){ f.recipientName = e.target.value; render(); }})
         ]),
         el("div",{class:"field"},[ el("label",{},["Email address(es) ", el("span",{class:"req"},["*"])]),
-          el("input",{class:"input", placeholder:"name@client.com, name2@client.com", value:f.recipientEmails, oninput:function(e){ f.recipientEmails = e.target.value; render(); }}),
+          el("input",{class:"input", placeholder:"name@client.com, name2@client.com", value:f.recipientEmails, "data-focus-key":"recipientEmails", oninput:function(e){ f.recipientEmails = e.target.value; render(); }}),
           (f.touched && invalid.length > 0) ? el("span",{class:"error-text"},["Not a valid email: " + invalid.join(", ")]) : el("span",{class:"help-text"},["Separate multiple addresses with commas"])
         ])
       ])
@@ -1069,7 +1095,7 @@
         if(c.id===VIEW.filterClient) o.selected = true;
         return o;
       }))),
-      el("input",{class:"input search", placeholder:"Search client…", value:VIEW.search, oninput:function(e){ VIEW.search = e.target.value; render(); }}),
+      el("input",{class:"input search", placeholder:"Search client…", value:VIEW.search, "data-focus-key":"trackerSearch", oninput:function(e){ VIEW.search = e.target.value; render(); }}),
       el("button",{class:"btn btn-primary btn-sm", style:"margin-left:auto;", onclick:function(){ VIEW.form = blankForm(); VIEW.tab = "send"; render(); }},["+ New deliverable"])
     ]);
   }
