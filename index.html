@@ -324,6 +324,7 @@
     sheetsConnected: false,
     sheetsSyncing: false,
     sheetsError: "",
+    freescoutEnabled: false,
     saving: false,
     banner: pendingToast,
     filterStatus: "all",
@@ -413,6 +414,27 @@
     return s.split(",").map(function(x){ return x.trim(); }).filter(Boolean);
   }
 
+  function copyText(text, btn){
+    function flash(ok){
+      var f = VIEW.form;
+      f.copyFeedback = ok ? "ok" : "fail";
+      render();
+      setTimeout(function(){ f.copyFeedback = false; render(); }, 1600);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ flash(true); }).catch(function(){ flash(false); });
+      return;
+    }
+    try{
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      var ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      flash(ok);
+    }catch(e){ flash(false); }
+  }
+
   function includedTypeKeys(f){
     return TYPE_ORDER.filter(function(t){ return f.selectedTypes[t]; });
   }
@@ -455,6 +477,7 @@
         if(data.clients && data.clients.length){ STATE.clients = data.clients; }
         if(data.log){ STATE.deliverables = data.log.slice().reverse(); }
         VIEW.sheetsConnected = true;
+        VIEW.freescoutEnabled = !!data.freescoutEnabled;
         if(showBanner){ VIEW.banner = { type:"good", text:"Synced with Google Sheets — " + STATE.clients.length + " clients, " + STATE.deliverables.length + " logged deliverables." }; }
         render();
       })
@@ -471,6 +494,14 @@
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ token: SETTINGS.token, action:"log", record: record })
+    }).then(function(r){ return r.json(); });
+  }
+
+  function draftToFreeScout(record){
+    return fetch(SETTINGS.url, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ token: SETTINGS.token, action:"freescoutDraft", record: record })
     }).then(function(r){ return r.json(); });
   }
 
@@ -788,7 +819,10 @@
         ])
       ]),
       el("div",{class:"field", style:"margin-top:16px;"},[
-        el("label",{},["Message ", el("span",{class:"req"},["*"])]),
+        el("div",{style:"display:flex; align-items:baseline; justify-content:space-between;"},[
+          el("label",{},["Message ", el("span",{class:"req"},["*"])]),
+          el("button",{class:"link-btn", type:"button", onclick:function(e){ copyText(f.message, e.currentTarget); }},[ f.copyFeedback === "ok" ? "Copied ✓" : f.copyFeedback === "fail" ? "Couldn't copy — select & copy manually" : "Copy message" ])
+        ]),
         el("textarea",{class:"input", rows:5, oninput:function(e){ f.message = e.target.value; render(); }},[f.message])
       ])
     ]);
@@ -928,7 +962,7 @@
     var existingSent = STATE.deliverables.find(function(d){
       return d.clientId === f.clientId && d.period === f.period && d.status === "sent" && d.id !== f.editingId;
     });
-    VIEW.confirmModal = { f: f, client: client, duplicate: existingSent || null };
+    VIEW.confirmModal = { f: f, client: client, duplicate: existingSent || null, freescoutDraft: VIEW.freescoutEnabled };
     render();
   }
 
@@ -950,19 +984,27 @@
         el("p",{class:"modal-note"},["This client already has a deliverable marked sent for " + fmtPeriod(m.duplicate.period) + " on " + fmtDateTime(m.duplicate.sentAt) + ". Sending again will log a second entry."])
       ]));
     }
+    if(VIEW.freescoutEnabled){
+      body.push(el("div",{class:"modal-body", style:"padding-top:0;"},[
+        el("label",{class:"type-check", style:"display:flex; width:100%;"},[
+          el("input",{type:"checkbox", checked: m.freescoutDraft, onchange:function(e){ m.freescoutDraft = e.target.checked; }}),
+          el("span",{style:"width:100%; text-align:left;"},["Also create a draft reply in FreeScout (won't send — you review and hit send there)"])
+        ])
+      ]));
+    }
     return el("div",{class:"overlay", onclick:function(e){ if(e.target === e.currentTarget){ VIEW.confirmModal = null; render(); } }},[
       el("div",{class:"modal"},[
         el("div",{class:"modal-head"},[ el("h3",{},[ m.duplicate ? "Send again?" : "Confirm & send" ]) ]),
         el("div",{},body),
         el("div",{class:"modal-foot"},[
           el("button",{class:"btn btn-ghost", onclick:function(){ VIEW.confirmModal = null; render(); }},["Cancel"]),
-          el("button",{class:"btn btn-primary", onclick:function(){ confirmSend(f, !!m.duplicate); }},[ m.duplicate ? "Send anyway" : "Confirm & send" ])
+          el("button",{class:"btn btn-primary", onclick:function(){ confirmSend(f, !!m.duplicate, !!m.freescoutDraft); }},[ m.duplicate ? "Send anyway" : "Confirm & send" ])
         ])
       ])
     ]);
   }
 
-  function confirmSend(f, isDuplicate){
+  function confirmSend(f, isDuplicate, wantFreescout){
     var next = cloneState();
     var record = formToRecord(f, "sent");
     if(isDuplicate){ next.deliverables.unshift(record); }
@@ -970,7 +1012,24 @@
     VIEW.confirmModal = null;
     VIEW.form = blankForm();
     VIEW.tab = "tracker";
-    persist(next, { type:"good", text:"Logged as sent to " + record.recipient.emails.join(", ") + ". Don't forget to actually send the email with a screenshot of the preview." }, record);
+    var toast = { type:"good", text:"Logged as sent to " + record.recipient.emails.join(", ") + "." };
+    if(!wantFreescout){
+      toast.text += " Don't forget to actually send the email with a screenshot of the preview.";
+    }
+    persist(next, toast, record);
+    if(wantFreescout && SETTINGS.url && SETTINGS.token){
+      draftToFreeScout(record).then(function(res){
+        if(res && res.ok){
+          VIEW.banner = { type:"good", text:"Logged as sent, and a draft reply is waiting in FreeScout for " + record.recipient.emails.join(", ") + " — review it there before it goes out." };
+        } else {
+          VIEW.banner = { type:"bad", text:"Logged as sent, but the FreeScout draft failed" + (res && res.error ? (": " + res.error) : "") + ". You'll need to create that reply by hand." };
+        }
+        render();
+      }).catch(function(err){
+        VIEW.banner = { type:"bad", text:"Logged as sent, but couldn't reach FreeScout (" + err.message + "). You'll need to create that reply by hand." };
+        render();
+      });
+    }
   }
 
   /* ---------------- tracker tab ---------------- */
