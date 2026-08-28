@@ -154,6 +154,8 @@
     border:1px solid var(--border-strong); background:var(--surface); color:var(--ink); font-size:14px;
   }
   textarea.input{ resize:vertical; line-height:1.5; }
+  .message-signoff{ margin-top:-1px; padding:10px 11px; border:1px solid var(--border-strong); border-top:none; border-radius:0 0 var(--radius-sm) var(--radius-sm); background:var(--surface-2); color:var(--ink-muted); font-size:14px; line-height:1.5; white-space:pre-line; }
+  textarea.input.textarea-with-signoff{ border-bottom-left-radius:0; border-bottom-right-radius:0; }
   .input:disabled,.select:disabled{ opacity:.55; cursor:not-allowed; }
   .select{ background-image:linear-gradient(45deg,transparent 50%,var(--ink-muted) 50%),linear-gradient(135deg,var(--ink-muted) 50%,transparent 50%); background-position:calc(100% - 18px) 14px,calc(100% - 13px) 14px; background-size:5px 5px,5px 5px; background-repeat:no-repeat; padding-right:32px; }
   .error-text{ font-size:12px; color:var(--bad); }
@@ -522,6 +524,10 @@
     return n;
   }
 
+  // The message body only — no signature. The "Thanks,\n{name}" sign-off is kept
+  // OUTSIDE this auto-generated/preserve-your-edits text on purpose: it's driven live
+  // by the "Sending as" picker (see signOff()), so switching senders always updates it,
+  // even after the body itself has been hand-edited and stopped auto-refreshing.
   function autoMessage(client, f){
     if(!client) return "";
     var typeNames = includedTypeKeys(f).map(function(t){ return TYPE_LABELS[t]; });
@@ -529,7 +535,15 @@
     var name = f.recipientName || (client.defaultRecipient && client.defaultRecipient.name) || "team";
     var statusLines = jurisdictionStatusLines(f, client);
     var statusBlock = statusLines.length ? ("\n\n" + statusLines.map(function(l){ return "- " + l; }).join("\n")) : "";
-    return "Hi " + name + " — attached is the " + typesText + " filing status for " + fmtPeriod(f.period) + "." + statusBlock + "\n\nLet us know if anything looks off.\n\nThanks,\n" + (SETTINGS.senderName || "Marc");
+    return "Hi " + name + " — attached is the " + typesText + " filing status for " + fmtPeriod(f.period) + "." + statusBlock + "\n\nLet us know if anything looks off.";
+  }
+
+  function signOff(){
+    return "Thanks,\n" + (SETTINGS.senderName || "Marc");
+  }
+
+  function messageWithSignature(f){
+    return f.message + "\n\n" + signOff();
   }
 
   /* ---------------- google sheets sync ---------------- */
@@ -795,8 +809,6 @@
           saveSettings();
           VIEW.addingSenderName = false;
           VIEW.newSenderNameDraft = "";
-          var client = clientById(VIEW.form.clientId);
-          if(client){ refreshAutoMessage(VIEW.form, client); }
           render();
         }},["Add"]),
         el("button",{class:"btn btn-ghost btn-sm", type:"button", onclick:function(){ VIEW.addingSenderName = false; VIEW.newSenderNameDraft = ""; render(); }},["Cancel"])
@@ -816,8 +828,6 @@
         if(e.target.value === "__add__"){ VIEW.addingSenderName = true; VIEW.newSenderNameDraft = ""; render(); return; }
         SETTINGS.senderName = e.target.value;
         saveSettings();
-        var client = clientById(VIEW.form.clientId);
-        if(client){ refreshAutoMessage(VIEW.form, client); }
         render();
       }}, options)
     ]);
@@ -1089,9 +1099,11 @@
       el("div",{class:"field", style:"margin-top:16px;"},[
         el("div",{style:"display:flex; align-items:baseline; justify-content:space-between;"},[
           el("label",{},["Message ", el("span",{class:"req"},["*"])]),
-          el("button",{class:"link-btn", type:"button", onclick:function(e){ copyText(f.message, e.currentTarget); }},[ f.copyFeedback === "ok" ? "Copied ✓" : f.copyFeedback === "fail" ? "Couldn't copy — select & copy manually" : "Copy message" ])
+          el("button",{class:"link-btn", type:"button", onclick:function(e){ copyText(messageWithSignature(f), e.currentTarget); }},[ f.copyFeedback === "ok" ? "Copied ✓" : f.copyFeedback === "fail" ? "Couldn't copy — select & copy manually" : "Copy message" ])
         ]),
-        el("textarea",{class:"input", rows:5, "data-focus-key":"message", oninput:function(e){ f.message = e.target.value; render(); }},[f.message])
+        el("textarea",{class:"input textarea-with-signoff", rows:5, "data-focus-key":"message", oninput:function(e){ f.message = e.target.value; render(); }},[f.message]),
+        el("div",{class:"message-signoff"},[ signOff() ]),
+        el("p",{class:"help-text"},["Signed automatically from the “Sending as” picker above — change it there, not here."])
       ])
     ]);
   }
@@ -1201,7 +1213,7 @@
       items: includedTypeKeys(f).map(function(t){ return { type:t, jurisdictions:(f.typeJurisdictions[t]||[]).slice() }; }),
       jurisdictions: includedTypeKeys(f).reduce(function(acc,t){ return acc.concat(f.typeJurisdictions[t]||[]); }, []),
       type: includedTypeKeys(f).map(function(t){return TYPE_LABELS[t];}).join(", "),
-      message: f.message,
+      message: messageWithSignature(f),
       attachments: f.attachments.slice(),
       files: f.attachments.map(function(a){return a.name;}).join(", "),
       recipient: { name: f.recipientName.trim(), emails: parseEmails(f.recipientEmails) },
@@ -1445,7 +1457,11 @@
     f.selectedTypes = {};
     f.typeJurisdictions = {};
     (d.items || []).forEach(function(it){ f.selectedTypes[it.type] = true; f.typeJurisdictions[it.type] = (it.jurisdictions||[]).slice(); });
-    f.message = d.message || "";
+    // The stored message has the sign-off baked in (whatever name was active at the
+    // time). Strip a trailing "Thanks,\n{name}" block so the editable body doesn't
+    // carry a stale name forward — the live signOff() below the textarea always shows
+    // the CURRENT "Sending as" pick instead.
+    f.message = (d.message || "").replace(/\n\nThanks,\n[^\n]*$/, "");
     f.messageAuto = "";
     f.attachments = (d.attachments || []).slice();
     f.recipientName = (d.recipient && d.recipient.name) || "";
