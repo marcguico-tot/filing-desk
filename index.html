@@ -124,10 +124,15 @@
   .icon-btn:hover{ color:var(--ink); border-color:var(--ink-faint); }
 
   /* ---------- tabs ---------- */
-  .tabs{ display:inline-flex; padding:4px; background:var(--surface-2); border:1px solid var(--border); border-radius:11px; margin-bottom:20px; gap:2px; }
+  .tabs-bar{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+  .tabs{ display:inline-flex; padding:4px; background:var(--surface-2); border:1px solid var(--border); border-radius:11px; gap:2px; }
   .tab{ appearance:none; border:none; background:transparent; padding:9px 16px; border-radius:8px; font-size:13.5px; font-weight:600; color:var(--ink-muted); cursor:pointer; display:flex; align-items:center; gap:8px; }
   .tab[aria-selected="true"]{ background:var(--surface); color:var(--ink); box-shadow:var(--shadow); }
   .tab .count{ font-family:var(--font-mono); font-size:11px; background:var(--bad-soft); color:var(--bad); padding:1px 6px; border-radius:999px; }
+  .sender-picker{ display:flex; align-items:center; gap:8px; }
+  .sender-picker label{ font-size:12.5px; color:var(--ink-muted); font-weight:600; white-space:nowrap; }
+  .sender-picker .select{ width:auto; min-width:140px; }
+  .sender-picker .input{ width:auto; min-width:140px; }
 
   /* ---------- card / sections ---------- */
   .card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); }
@@ -364,11 +369,22 @@
   var STATE = JSON.parse(document.getElementById("state-data").textContent);
   var SEED_STATE = JSON.parse(JSON.stringify(STATE));
 
-  var SETTINGS = { url:"", token:"", senderName:"" };
+  var SETTINGS = { url:"", token:"", senderName:"", senderNames: ["Milner","Amanda","Haroon"] };
   try{
     var raw = localStorage.getItem(SETTINGS_KEY);
-    if(raw){ var parsed = JSON.parse(raw); SETTINGS.url = parsed.url || ""; SETTINGS.token = parsed.token || ""; SETTINGS.senderName = parsed.senderName || ""; }
+    if(raw){
+      var parsed = JSON.parse(raw);
+      SETTINGS.url = parsed.url || "";
+      SETTINGS.token = parsed.token || "";
+      SETTINGS.senderName = parsed.senderName || "";
+      if(Array.isArray(parsed.senderNames) && parsed.senderNames.length){ SETTINGS.senderNames = parsed.senderNames; }
+    }
   }catch(e){}
+  // If a name was picked (or set via an earlier build) that isn't in the roster, keep it
+  // selectable rather than silently falling back to something else.
+  if(SETTINGS.senderName && SETTINGS.senderNames.indexOf(SETTINGS.senderName) === -1){
+    SETTINGS.senderNames.push(SETTINGS.senderName);
+  }
 
   var pendingToast = null;
   try{
@@ -392,7 +408,9 @@
     confirmModal: null,
     detailModal: null,
     settingsOpen: false,
-    settingsDraft: { url: SETTINGS.url, token: SETTINGS.token, name: SETTINGS.senderName },
+    settingsDraft: { url: SETTINGS.url, token: SETTINGS.token },
+    addingSenderName: false,
+    newSenderNameDraft: "",
     form: blankForm()
   };
 
@@ -694,7 +712,7 @@
     app.innerHTML = "";
     app.appendChild(renderTopbar());
     if(VIEW.banner){ app.appendChild(renderBanner()); }
-    app.appendChild(renderTabs());
+    app.appendChild(renderTabsBar());
     if(VIEW.tab === "send"){ app.appendChild(renderSendTab()); }
     else { app.appendChild(renderTrackerTab()); }
     if(VIEW.confirmModal){ app.appendChild(renderConfirmModal()); }
@@ -746,6 +764,10 @@
     ]);
   }
 
+  function renderTabsBar(){
+    return el("div",{class:"tabs-bar"},[ renderTabs(), renderSenderPicker() ]);
+  }
+
   function renderTabs(){
     var needsAttention = STATE.deliverables.filter(function(d){ return d.status === "failed"; }).length;
     return el("div",{class:"tabs", role:"tablist"},[
@@ -754,6 +776,50 @@
         "Tracker",
         needsAttention > 0 ? el("span",{class:"count"},[String(needsAttention)]) : null
       ])
+    ]);
+  }
+
+  // Who "Sent by" and the message sign-off attribute this session to. Lives beside the
+  // tabs (not buried in Settings) since it's something people switch day to day, not a
+  // one-time configuration step. Persisted per-browser in localStorage, same as the
+  // Sheets connection.
+  function renderSenderPicker(){
+    if(VIEW.addingSenderName){
+      return el("div",{class:"sender-picker"},[
+        el("input",{class:"input", placeholder:"Name", value:VIEW.newSenderNameDraft, "data-focus-key":"newSenderName", oninput:function(e){ VIEW.newSenderNameDraft = e.target.value; }}),
+        el("button",{class:"btn btn-sm", type:"button", onclick:function(){
+          var v = VIEW.newSenderNameDraft.trim();
+          if(!v) return;
+          if(SETTINGS.senderNames.indexOf(v) === -1){ SETTINGS.senderNames.push(v); }
+          SETTINGS.senderName = v;
+          saveSettings();
+          VIEW.addingSenderName = false;
+          VIEW.newSenderNameDraft = "";
+          var client = clientById(VIEW.form.clientId);
+          if(client){ refreshAutoMessage(VIEW.form, client); }
+          render();
+        }},["Add"]),
+        el("button",{class:"btn btn-ghost btn-sm", type:"button", onclick:function(){ VIEW.addingSenderName = false; VIEW.newSenderNameDraft = ""; render(); }},["Cancel"])
+      ]);
+    }
+    var current = SETTINGS.senderName;
+    var options = SETTINGS.senderNames.map(function(n){
+      var o = el("option",{value:n},[n]);
+      if(n === current) o.selected = true;
+      return o;
+    });
+    if(!current){ options.unshift(el("option",{value:""},["Select sender…"])); }
+    options.push(el("option",{value:"__add__"},["+ Add name…"]));
+    return el("div",{class:"sender-picker"},[
+      el("label",{},["Sending as"]),
+      el("select",{class:"select", onchange:function(e){
+        if(e.target.value === "__add__"){ VIEW.addingSenderName = true; VIEW.newSenderNameDraft = ""; render(); return; }
+        SETTINGS.senderName = e.target.value;
+        saveSettings();
+        var client = clientById(VIEW.form.clientId);
+        if(client){ refreshAutoMessage(VIEW.form, client); }
+        render();
+      }}, options)
     ]);
   }
 
@@ -769,15 +835,9 @@
 
     return el("div",{class:"overlay", onclick:function(e){ if(e.target === e.currentTarget){ VIEW.settingsOpen = false; render(); } }},[
       el("div",{class:"modal"},[
-        el("div",{class:"modal-head"},[ el("h3",{},["Settings"]) ]),
+        el("div",{class:"modal-head"},[ el("h3",{},["Connect to Google Sheets"]) ]),
         el("div",{class:"modal-body"},[
-          el("div",{class:"field"},[ el("label",{},["Your name"]),
-            el("input",{class:"input", placeholder:"e.g. Marc Guico", value:d.name, oninput:function(e){ d.name = e.target.value; }}),
-            el("span",{class:"help-text"},["Used as “Sent by” on deliverables you send — shown in the Tracker and in the Sheet."])
-          ])
-        ]),
-        el("div",{class:"modal-body", style:"padding-top:0;"},[
-          el("p",{class:"help-text"},["Paste the Web app URL and token from the Filing Desk Apps Script deployment (see Code.gs for setup steps) to connect Google Sheets."]),
+          el("p",{class:"help-text"},["Paste the Web app URL and token from the Filing Desk Apps Script deployment (see Code.gs for setup steps)."]),
           el("div",{class:"field"},[ el("label",{},["Web app URL"]),
             el("input",{class:"input", placeholder:"https://script.google.com/macros/s/…/exec", value:d.url, oninput:function(e){ d.url = e.target.value; }})
           ]),
@@ -790,15 +850,15 @@
           SETTINGS.url ? el("button",{class:"btn btn-ghost", onclick:function(){
             SETTINGS.url = ""; SETTINGS.token = ""; saveSettings();
             STATE = JSON.parse(JSON.stringify(SEED_STATE));
-            VIEW.sheetsConnected = false; VIEW.sheetsError = ""; VIEW.settingsDraft = { url:"", token:"", name: SETTINGS.senderName };
+            VIEW.sheetsConnected = false; VIEW.sheetsError = ""; VIEW.settingsDraft = { url:"", token:"" };
             VIEW.banner = { type:"info", text:"Disconnected — back to built-in sample data." };
             render();
           }},["Disconnect"]) : null,
           el("button",{class:"btn btn-ghost", onclick:function(){ VIEW.settingsOpen = false; render(); }},["Close"]),
           el("button",{class:"btn btn-primary", onclick:function(){
-            SETTINGS.url = d.url.trim(); SETTINGS.token = d.token.trim(); SETTINGS.senderName = d.name.trim();
+            SETTINGS.url = d.url.trim(); SETTINGS.token = d.token.trim();
             saveSettings();
-            if(SETTINGS.url){ syncFromSheets(true); } else { VIEW.banner = { type:"good", text:"Saved." }; render(); }
+            syncFromSheets(true);
           }},["Save & connect"])
         ])
       ])
