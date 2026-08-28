@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Filing Desk</title>
-<meta name="description" content="Workflow tool for preparing, sending, and tracking PACT/Excise reporting deliverables to clients.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -288,6 +287,8 @@
   .dot-bad{ background:var(--bad); }
   .dot-idle{ background:var(--ink-faint); }
 </style>
+</head>
+<body>
 <script type="application/json" id="state-data">{"clients":[{"id":"vapesocietysupplies","domain":"vapesocietysupplies.com","platform":"Shopify","ref":"c-1003","types":{"pact_pa2":{"label":"PACT — PA-2","states":["AK","AL","AZ","DC","DE","FL","HI","IA","ID","IN","MS","MT","NC","NM","OK","SD","TX","WI","WV"]},"pact_state":{"label":"PACT — State Specific","states":["CA","CO","CT","IA","IL","IN","KS","MN","MO","ND","OH","PA","SC","TN","VA","WA"]}}},{"id":"selectvape","domain":"selectvape.com","platform":"WooCommerce","ref":"c-1009","types":{"pact_pa2":{"label":"PACT — PA-2","states":["AZ","CA","FL","ID","MS","MT","ND","NE","OK","SC","SD","TX"]},"pact_state":{"label":"PACT — State Specific","states":["MI","MO","TN"]}}},{"id":"myqwin","domain":"myqwin.com","platform":"Shopify","ref":"c-1022","types":{"pact_pa2":{"label":"PACT — PA-2","states":["DC","FL","LA","MD","MS","NC","NJ","NV","NY","OK","TX"]},"pact_state":{"label":"PACT — State Specific","states":["GA","HI","IL","IN","KS","MI","MN","MO","NV","OH","PA","SC","TN","VA"]}}},{"id":"zuluvape","domain":"zuluvape.com","platform":"Shopify","ref":"c-1029","types":{"pact_pa2":{"label":"PACT — PA-2","states":["AZ","DE","FL","ID","MI","MO","TX"]},"pact_state":{"label":"PACT — State Specific","states":["MI","MO","SC","TN"]}}},{"id":"streamlinevape","domain":"streamlinevape.com","platform":"QuickBooks","ref":"c-1018","types":{"pact_pa2":{"label":"PACT — PA-2","states":["AK","AL","AZ","CT","DC","DE","FL","ID","LA","MA","MD","ME","MS","NC","NH","NJ","NM","NV","NY","OK","RI","TX","WI","WV","WY"]},"pact_state":{"label":"PACT — State Specific","states":["AR","CA","CO","GA","HI","IA","IL","IN","KS","MI","MN","MO","NE","NV","OH","OR","PA","SC","TN","UT","VA","VT","WA"]},"excise":{"label":"Excise","states":["AK","CA","CT","DE","GA","HI","IL","IN","KS","LA"]}}},{"id":"bigdvapor","domain":"bigdvapor.net","platform":"Shopify Plus","ref":"c-1000","types":{"pact_pa2":{"label":"PACT — PA-2","states":["AK","AL","CT","DC","DE","FL","ID","KY","LA","MA","MD","ME","MS","NC","ND","NH","NJ","NM","NY","OK","RI","SD","TX","WI","WV","WY"]},"pact_state":{"label":"PACT — State Specific","states":["CO","IA","IN","KS","MI","MN","MO","NV","OH","PA","TN","VA","WA"]},"excise":{"label":"Excise","states":["AK","CT","DE","GA","HI","IN"]}}},{"id":"vapedepotusa","domain":"vapedepotusa.com","platform":"WooCommerce","ref":"c-1027","types":{"pact_pa2":{"label":"PACT — PA-2","states":["CA","ID","MT","TX"]},"excise":{"label":"Excise","states":["CA"]}}}],"deliverables":[{"id":"d1","clientId":"streamlinevape","period":"2026-07","items":[{"type":"pact_pa2","jurisdictions":["AK","AL","AZ","CT","DC","DE","FL","ID","LA","MA","MD","ME","MS","NC","NH","NJ","NM","NV","NY","OK","RI","TX","WI","WV","WY"]}],"message":"Hi Streamline Vape team — attached is the PACT PA-2 filing status for July 2026. Let us know if anything looks off.\n\nThanks,\nMarc","recipient":{"name":"Streamline Vape — Compliance","emails":["compliance@streamlinevape.com"]},"attachments":[],"status":"sent","sentAt":"2026-08-05T18:12:00.000Z","sentBy":"Marc Guico","note":""},{"id":"d2","clientId":"bigdvapor","period":"2026-07","items":[{"type":"pact_state","jurisdictions":["CO","IA","IN","KS","MI","MN","MO","NV","OH","PA","TN","VA","WA"]}],"message":"Hi BigD Vapor team — attached is the PACT State Specific filing status for July 2026.\n\nThanks,\nMarc","recipient":{"name":"BigD Vapor — Filings","emails":["filings@bigdvapor.net"]},"attachments":[],"status":"sent","sentAt":"2026-08-06T15:40:00.000Z","sentBy":"Marc Guico","note":""},{"id":"d3","clientId":"selectvape","period":"2026-07","items":[{"type":"pact_state","jurisdictions":["MI","MO","TN"]}],"message":"Hi SelectVape team — attached is the PACT State Specific filing status for July 2026.\n\nThanks,\nMarc","recipient":{"name":"SelectVape — Ops","emails":["ops@selectvape.com"]},"attachments":[],"status":"sent","sentAt":"2026-08-04T20:05:00.000Z","sentBy":"Marc Guico","note":""},{"id":"d4","clientId":"vapedepotusa","period":"2026-07","items":[{"type":"excise","jurisdictions":["CA"]}],"message":"Hi VapeDepot USA team — attached is the Excise filing status for July 2026.\n\nThanks,\nMarc","recipient":{"name":"VapeDepot USA","emails":["ops@vapedepotusa.com"]},"attachments":[],"status":"failed","sentAt":"2026-08-05T12:02:00.000Z","sentBy":"Marc Guico","note":"Recipient address bounced — confirm current contact before resending."},{"id":"d5","clientId":"myqwin","period":"2026-08","items":[{"type":"pact_pa2","jurisdictions":["DC","FL","LA","MD","MS","NC","NY"]},{"type":"pact_state","jurisdictions":["GA","HI","IL"]}],"message":"","recipient":{"name":"","emails":[]},"attachments":[],"status":"draft","sentAt":"","sentBy":"","note":""},{"id":"d6","clientId":"zuluvape","period":"2026-08","items":[{"type":"pact_pa2","jurisdictions":["AZ","DE","FL","ID","MI","MO","TX"]}],"message":"Hi ZuluVape team — attached is the PACT PA-2 filing status for August 2026.\n\nThanks,\nMarc","recipient":{"name":"ZuluVape — Filings","emails":["filings@zuluvape.com"]},"attachments":[],"status":"draft","sentAt":"","sentBy":"","note":""}]}</script>
 <div id="app"></div>
 <script id="app-script">
@@ -296,6 +297,26 @@
 
   var TYPE_ORDER = ["pact_pa2","pact_state","excise"];
   var TYPE_LABELS = { pact_pa2:"PACT — PA-2", pact_state:"PACT — State Specific", excise:"Excise" };
+  var US_STATES = [
+    {code:"AL",name:"Alabama"},{code:"AK",name:"Alaska"},{code:"AZ",name:"Arizona"},{code:"AR",name:"Arkansas"},
+    {code:"CA",name:"California"},{code:"CO",name:"Colorado"},{code:"CT",name:"Connecticut"},{code:"DE",name:"Delaware"},
+    {code:"DC",name:"District of Columbia"},{code:"FL",name:"Florida"},{code:"GA",name:"Georgia"},{code:"HI",name:"Hawaii"},
+    {code:"ID",name:"Idaho"},{code:"IL",name:"Illinois"},{code:"IN",name:"Indiana"},{code:"IA",name:"Iowa"},
+    {code:"KS",name:"Kansas"},{code:"KY",name:"Kentucky"},{code:"LA",name:"Louisiana"},{code:"ME",name:"Maine"},
+    {code:"MD",name:"Maryland"},{code:"MA",name:"Massachusetts"},{code:"MI",name:"Michigan"},{code:"MN",name:"Minnesota"},
+    {code:"MS",name:"Mississippi"},{code:"MO",name:"Missouri"},{code:"MT",name:"Montana"},{code:"NE",name:"Nebraska"},
+    {code:"NV",name:"Nevada"},{code:"NH",name:"New Hampshire"},{code:"NJ",name:"New Jersey"},{code:"NM",name:"New Mexico"},
+    {code:"NY",name:"New York"},{code:"NC",name:"North Carolina"},{code:"ND",name:"North Dakota"},{code:"OH",name:"Ohio"},
+    {code:"OK",name:"Oklahoma"},{code:"OR",name:"Oregon"},{code:"PA",name:"Pennsylvania"},{code:"RI",name:"Rhode Island"},
+    {code:"SC",name:"South Carolina"},{code:"SD",name:"South Dakota"},{code:"TN",name:"Tennessee"},{code:"TX",name:"Texas"},
+    {code:"UT",name:"Utah"},{code:"VT",name:"Vermont"},{code:"VA",name:"Virginia"},{code:"WA",name:"Washington"},
+    {code:"WV",name:"West Virginia"},{code:"WI",name:"Wisconsin"},{code:"WY",name:"Wyoming"}
+  ];
+  function statesNotIn(list){
+    var used = {};
+    (list || []).forEach(function(s){ used[s] = true; });
+    return US_STATES.filter(function(s){ return !used[s.code]; });
+  }
   var STATUS_LABELS = { draft:"Draft", sent:"Sent", failed:"Failed" };
   var TOAST_KEY = "filingdesk_pending_toast_v1";
   var SETTINGS_KEY = "filingdesk_sheets_settings_v1";
@@ -509,6 +530,43 @@
     }).then(function(r){ return r.json(); });
   }
 
+  function clientTypesPayload(client){
+    var types = {};
+    TYPE_ORDER.forEach(function(t){
+      if(client.types[t]){ types[t] = { states: client.types[t].states.slice() }; }
+    });
+    return types;
+  }
+
+  // Pushes a client's current delivery-type / jurisdiction config back to wherever
+  // Filing Desk persists state. Called whenever the send form is used to enable a
+  // delivery type or add a jurisdiction that wasn't previously set up for that
+  // client, so the change sticks around instead of only living in this tab.
+  function syncClientConfig(client){
+    if(HAS_RUNTIME){
+      window.claude.use("artifact").then(function(ns){
+        if(!ns) return;
+        return ns.publish(fullDocument(STATE)).catch(function(){});
+      }).catch(function(){});
+      return;
+    }
+    if(SETTINGS.url && SETTINGS.token){
+      fetch(SETTINGS.url, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ token: SETTINGS.token, action:"updateClient", client: { domain: client.domain, ref: client.ref, types: clientTypesPayload(client) } })
+      }).then(function(r){ return r.json(); }).then(function(res){
+        if(!res || !res.ok){
+          VIEW.banner = { type:"bad", text:"Couldn't save that client change to Google Sheets" + (res && res.error ? (": " + res.error) : "") + ". It's kept here for now, but will be lost if you refresh before it saves." };
+          render();
+        }
+      }).catch(function(err){
+        VIEW.banner = { type:"bad", text:"Couldn't reach Google Sheets to save that client change (" + err.message + "). It's kept here for now, but will be lost if you refresh before it saves." };
+        render();
+      });
+    }
+  }
+
   /* ---------------- persistence ---------------- */
 
   function fullDocument(state){
@@ -710,7 +768,7 @@
 
     var wrap = el("div",{},[]);
     wrap.appendChild(renderClientSection(f, client));
-    if(client && includedTypeKeys(f).length >= 0 && Object.keys(client.types).length){
+    if(client){
       wrap.appendChild(renderJurisdictionSection(f, client));
       wrap.appendChild(renderPreviewSection(f, client));
       wrap.appendChild(renderAttachmentSection(f));
@@ -757,13 +815,17 @@
       var available = client && client.types[t];
       var checked = !!f.selectedTypes[t];
       return el("label",{class:"type-check"},[
-        el("input",{type:"checkbox", disabled: !available, checked: checked, onchange:function(e){
+        el("input",{type:"checkbox", disabled: !client, checked: checked, onchange:function(e){
+          if(e.target.checked && !client.types[t]){
+            client.types[t] = { label: TYPE_LABELS[t], states: [] };
+            syncClientConfig(client);
+          }
           f.selectedTypes[t] = e.target.checked;
           if(e.target.checked && !f.typeJurisdictions[t]){ f.typeJurisdictions[t] = client.types[t].states.slice(); }
           refreshAutoMessage(f, client);
           render();
         }}),
-        el("span",{},[ TYPE_LABELS[t] ])
+        el("span",{},[ TYPE_LABELS[t] + (available ? "" : " + add") ])
       ]);
     });
 
@@ -776,12 +838,41 @@
             : null
         ]),
         el("div",{class:"field"},[ el("label",{},["Included in this delivery ", el("span",{class:"req"},["*"])]),
-          client ? el("div",{class:"type-check-row"}, typeButtons) : el("span",{class:"help-text"},["Choose a client first"])
+          client ? el("div",{class:"type-check-row"}, typeButtons) : el("span",{class:"help-text"},["Choose a client first"]),
+          client ? el("span",{class:"help-text"},["Marked “+ add” isn't set up for this client yet — checking it adds that delivery type to their profile."]) : null
         ]),
         el("div",{class:"field"},[ el("label",{},["Reporting period ", el("span",{class:"req"},["*"])]),
           el("input",{class:"input", type:"month", value:f.period, onchange:function(e){ f.period = e.target.value; refreshAutoMessage(f, client); render(); }})
         ])
       ])
+    ]);
+  }
+
+  function renderAddJurisdictionControl(f, client, t){
+    var allStates = client.types[t].states;
+    var remaining = statesNotIn(allStates);
+    if(!remaining.length) return null;
+    f.addStateDraft = f.addStateDraft || {};
+    if(!f.addStateDraft[t] || allStates.indexOf(f.addStateDraft[t]) !== -1){ f.addStateDraft[t] = remaining[0].code; }
+    return el("div",{style:"display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;"},[
+      el("select",{class:"select", style:"width:auto; min-width:170px;", onchange:function(e){ f.addStateDraft[t] = e.target.value; }},
+        remaining.map(function(s){
+          var o = el("option",{value:s.code},[s.code + " — " + s.name]);
+          if(s.code === f.addStateDraft[t]) o.selected = true;
+          return o;
+        })
+      ),
+      el("button",{class:"btn btn-sm", type:"button", onclick:function(){
+        var code = f.addStateDraft[t];
+        if(!code) return;
+        if(allStates.indexOf(code) === -1){ allStates.push(code); allStates.sort(); }
+        var sel = f.typeJurisdictions[t] || [];
+        if(sel.indexOf(code) === -1){ sel.push(code); }
+        f.typeJurisdictions[t] = sel;
+        delete f.addStateDraft[t];
+        syncClientConfig(client);
+        render();
+      }},["+ Add jurisdiction"])
     ]);
   }
 
@@ -803,7 +894,7 @@
             el("span",{class:"type-block-title"},[TYPE_LABELS[t]]),
             el("span",{class:"chip-count"},[sel.length + " of " + allStates.length])
           ]),
-          el("div",{class:"chiprow"}, allStates.map(function(st){
+          allStates.length ? el("div",{class:"chiprow"}, allStates.map(function(st){
             var checked = sel.indexOf(st) !== -1;
             return el("label",{class:"chip-check"},[
               el("input",{type:"checkbox", checked:checked, onchange:function(){
@@ -814,12 +905,13 @@
               }}),
               el("span",{},[st])
             ]);
-          })),
-          el("div",{style:"margin-top:6px;"},[
+          })) : el("p",{class:"empty-note"},["No jurisdictions set up yet for this delivery type — add one below."]),
+          allStates.length ? el("div",{style:"margin-top:6px;"},[
             el("button",{class:"link-btn", onclick:function(){ f.typeJurisdictions[t] = allStates.slice(); render(); }},["Select all"]),
             el("span",{},[" · "]),
             el("button",{class:"link-btn", onclick:function(){ f.typeJurisdictions[t] = []; render(); }},["Clear"])
-          ])
+          ]) : null,
+          renderAddJurisdictionControl(f, client, t)
         ]);
       }))
     ]);
@@ -1222,6 +1314,5 @@
   if(!HAS_RUNTIME && SETTINGS.url){ syncFromSheets(false); }
 })();
 </script>
-
 </body>
 </html>
