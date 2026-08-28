@@ -176,6 +176,11 @@
   }
   .chip-check input:checked + span{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
   .chip-check input:focus-visible + span{ outline:2px solid var(--accent); outline-offset:2px; }
+  .chip-item{ display:inline-flex; align-items:center; gap:1px; }
+  .chip-remove{ appearance:none; border:none; background:none; color:var(--ink-faint); cursor:pointer; font-size:13px; line-height:1; padding:4px 5px; }
+  .chip-remove:hover{ color:var(--bad); }
+  .chip-remove-confirm{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:8px; background:var(--bad-soft); color:var(--bad); font-size:12px; font-weight:600; }
+  .chip-remove-confirm button{ appearance:none; border:none; background:none; color:var(--bad); font-weight:700; text-decoration:underline; cursor:pointer; font-size:12px; padding:0; }
   .type-block{ margin-bottom:18px; }
   .type-block:last-child{ margin-bottom:0; }
   .type-block-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
@@ -359,10 +364,10 @@
   var STATE = JSON.parse(document.getElementById("state-data").textContent);
   var SEED_STATE = JSON.parse(JSON.stringify(STATE));
 
-  var SETTINGS = { url:"", token:"" };
+  var SETTINGS = { url:"", token:"", senderName:"" };
   try{
     var raw = localStorage.getItem(SETTINGS_KEY);
-    if(raw){ var parsed = JSON.parse(raw); SETTINGS.url = parsed.url || ""; SETTINGS.token = parsed.token || ""; }
+    if(raw){ var parsed = JSON.parse(raw); SETTINGS.url = parsed.url || ""; SETTINGS.token = parsed.token || ""; SETTINGS.senderName = parsed.senderName || ""; }
   }catch(e){}
 
   var pendingToast = null;
@@ -387,7 +392,7 @@
     confirmModal: null,
     detailModal: null,
     settingsOpen: false,
-    settingsDraft: { url: SETTINGS.url, token: SETTINGS.token },
+    settingsDraft: { url: SETTINGS.url, token: SETTINGS.token, name: SETTINGS.senderName },
     form: blankForm()
   };
 
@@ -506,7 +511,7 @@
     var name = f.recipientName || (client.defaultRecipient && client.defaultRecipient.name) || "team";
     var statusLines = jurisdictionStatusLines(f, client);
     var statusBlock = statusLines.length ? ("\n\n" + statusLines.map(function(l){ return "- " + l; }).join("\n")) : "";
-    return "Hi " + name + " — attached is the " + typesText + " filing status for " + fmtPeriod(f.period) + "." + statusBlock + "\n\nLet us know if anything looks off.\n\nThanks,\nMarc";
+    return "Hi " + name + " — attached is the " + typesText + " filing status for " + fmtPeriod(f.period) + "." + statusBlock + "\n\nLet us know if anything looks off.\n\nThanks,\n" + (SETTINGS.senderName || "Marc");
   }
 
   /* ---------------- google sheets sync ---------------- */
@@ -764,9 +769,15 @@
 
     return el("div",{class:"overlay", onclick:function(e){ if(e.target === e.currentTarget){ VIEW.settingsOpen = false; render(); } }},[
       el("div",{class:"modal"},[
-        el("div",{class:"modal-head"},[ el("h3",{},["Connect to Google Sheets"]) ]),
+        el("div",{class:"modal-head"},[ el("h3",{},["Settings"]) ]),
         el("div",{class:"modal-body"},[
-          el("p",{class:"help-text"},["Paste the Web app URL and token from the Filing Desk Apps Script deployment (see Code.gs for setup steps)."]),
+          el("div",{class:"field"},[ el("label",{},["Your name"]),
+            el("input",{class:"input", placeholder:"e.g. Marc Guico", value:d.name, oninput:function(e){ d.name = e.target.value; }}),
+            el("span",{class:"help-text"},["Used as “Sent by” on deliverables you send — shown in the Tracker and in the Sheet."])
+          ])
+        ]),
+        el("div",{class:"modal-body", style:"padding-top:0;"},[
+          el("p",{class:"help-text"},["Paste the Web app URL and token from the Filing Desk Apps Script deployment (see Code.gs for setup steps) to connect Google Sheets."]),
           el("div",{class:"field"},[ el("label",{},["Web app URL"]),
             el("input",{class:"input", placeholder:"https://script.google.com/macros/s/…/exec", value:d.url, oninput:function(e){ d.url = e.target.value; }})
           ]),
@@ -777,17 +788,17 @@
         ]),
         el("div",{class:"modal-foot"},[
           SETTINGS.url ? el("button",{class:"btn btn-ghost", onclick:function(){
-            SETTINGS = { url:"", token:"" }; saveSettings();
+            SETTINGS.url = ""; SETTINGS.token = ""; saveSettings();
             STATE = JSON.parse(JSON.stringify(SEED_STATE));
-            VIEW.sheetsConnected = false; VIEW.sheetsError = ""; VIEW.settingsDraft = { url:"", token:"" };
+            VIEW.sheetsConnected = false; VIEW.sheetsError = ""; VIEW.settingsDraft = { url:"", token:"", name: SETTINGS.senderName };
             VIEW.banner = { type:"info", text:"Disconnected — back to built-in sample data." };
             render();
           }},["Disconnect"]) : null,
           el("button",{class:"btn btn-ghost", onclick:function(){ VIEW.settingsOpen = false; render(); }},["Close"]),
           el("button",{class:"btn btn-primary", onclick:function(){
-            SETTINGS.url = d.url.trim(); SETTINGS.token = d.token.trim();
+            SETTINGS.url = d.url.trim(); SETTINGS.token = d.token.trim(); SETTINGS.senderName = d.name.trim();
             saveSettings();
-            syncFromSheets(true);
+            if(SETTINGS.url){ syncFromSheets(true); } else { VIEW.banner = { type:"good", text:"Saved." }; render(); }
           }},["Save & connect"])
         ])
       ])
@@ -917,6 +928,46 @@
     ]);
   }
 
+  // Renders one state chip in a type's jurisdiction list. Checking/unchecking it
+  // only affects THIS delivery's selection. The small × removes the state from the
+  // client's permanent profile (and the Sheet, via syncClientConfig) — a two-step
+  // action, since unlike adding a jurisdiction this can't be undone by re-toggling.
+  function renderStateChip(f, client, t, st, sel){
+    var pending = f.pendingRemove && f.pendingRemove.t === t && f.pendingRemove.code === st;
+    if(pending){
+      return el("span",{class:"chip-remove-confirm"},[
+        "Remove " + st + "?",
+        el("button",{type:"button", onclick:function(){
+          var master = client.types[t].states;
+          var mi = master.indexOf(st);
+          if(mi !== -1){ master.splice(mi, 1); }
+          var si = sel.indexOf(st);
+          if(si !== -1){ sel.splice(si, 1); }
+          f.typeJurisdictions[t] = sel;
+          f.pendingRemove = null;
+          syncClientConfig(client);
+          refreshAutoMessage(f, client);
+          render();
+        }},["Remove"]),
+        el("button",{type:"button", style:"color:var(--ink-muted); text-decoration:none;", onclick:function(){ f.pendingRemove = null; render(); }},["Cancel"])
+      ]);
+    }
+    var checked = sel.indexOf(st) !== -1;
+    return el("div",{class:"chip-item"},[
+      el("label",{class:"chip-check"},[
+        el("input",{type:"checkbox", checked:checked, onchange:function(){
+          var idx = sel.indexOf(st);
+          if(idx === -1){ sel.push(st); } else { sel.splice(idx,1); }
+          f.typeJurisdictions[t] = sel;
+          refreshAutoMessage(f, client);
+          render();
+        }}),
+        el("span",{},[st])
+      ]),
+      el("button",{class:"chip-remove", type:"button", title:"Remove " + st + " from this client permanently", "aria-label":"Remove " + st + " permanently", onclick:function(){ f.pendingRemove = { t:t, code:st }; render(); }},["×"])
+    ]);
+  }
+
   function renderJurisdictionSection(f, client){
     var keys = includedTypeKeys(f);
     if(!keys.length){
@@ -936,17 +987,7 @@
             el("span",{class:"chip-count"},[sel.length + " of " + allStates.length])
           ]),
           allStates.length ? el("div",{class:"chiprow"}, allStates.map(function(st){
-            var checked = sel.indexOf(st) !== -1;
-            return el("label",{class:"chip-check"},[
-              el("input",{type:"checkbox", checked:checked, onchange:function(){
-                var idx = sel.indexOf(st);
-                if(idx === -1){ sel.push(st); } else { sel.splice(idx,1); }
-                f.typeJurisdictions[t] = sel;
-                refreshAutoMessage(f, client);
-                render();
-              }}),
-              el("span",{},[st])
-            ]);
+            return renderStateChip(f, client, t, st, sel);
           })) : el("p",{class:"empty-note"},["No jurisdictions set up yet for this delivery type — add one below."]),
           allStates.length ? el("div",{style:"margin-top:6px;"},[
             el("button",{class:"link-btn", onclick:function(){ f.typeJurisdictions[t] = allStates.slice(); refreshAutoMessage(f, client); render(); }},["Select all"]),
@@ -1106,7 +1147,7 @@
       recipient: { name: f.recipientName.trim(), emails: parseEmails(f.recipientEmails) },
       status: status,
       sentAt: status === "sent" ? new Date().toISOString() : "",
-      sentBy: status === "sent" ? "Marc Guico" : "",
+      sentBy: status === "sent" ? (SETTINGS.senderName || "Marc Guico") : "",
       note: ""
     };
   }
@@ -1285,12 +1326,13 @@
         el("td",{class:"mono"},[String(jurisdictionCount(d))]),
         el("td",{},[ (d.recipient && d.recipient.emails && d.recipient.emails.length) ? d.recipient.emails.join(", ") : "—" ]),
         el("td",{},[ el("span",{class:"pill pill-" + d.status},[STATUS_LABELS[d.status] || d.status]) ]),
-        el("td",{class:"mono"},[ d.sentAt ? fmtDateTime(d.sentAt) : "—" ])
+        el("td",{class:"mono"},[ d.sentAt ? fmtDateTime(d.sentAt) : "—" ]),
+        el("td",{},[ d.sentBy || "—" ])
       ]);
     }));
     return el("div",{class:"table-wrap"},[
       el("table",{},[
-        el("thead",{},[ el("tr",{}, ["Client","Included","Period","States","Recipient","Status","Sent"].map(function(h){ return el("th",{},[h]); })) ]),
+        el("thead",{},[ el("tr",{}, ["Client","Included","Period","States","Recipient","Status","Sent","Sent by"].map(function(h){ return el("th",{},[h]); })) ]),
         body
       ])
     ]);
