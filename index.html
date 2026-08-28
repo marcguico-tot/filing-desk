@@ -330,21 +330,24 @@
     if(items.length === 2) return items[0] + " and " + items[1];
     return items.slice(0, -1).join(", ") + ", and " + items[items.length - 1];
   }
-  // For each included delivery type: which of its known states are checked for this
-  // delivery ("included this period") vs. known but currently unchecked ("not yet
-  // included"). Feeds the auto-message so the states toggled in the Jurisdictions
-  // section are spelled out in the email text, not just shown as chips.
+  // For each included delivery type: a one-line status vs. the checkboxes in the
+  // Jurisdictions section. When every known state is checked, keep it to a count
+  // ("all 27 states included") rather than spelling out every name — the full list
+  // only earns its place when something's actually still pending, since that's the
+  // part worth reading.
   function jurisdictionStatusLines(f, client){
     if(!client) return [];
     return includedTypeKeys(f).map(function(t){
       var sel = f.typeJurisdictions[t] || [];
       var master = (client.types[t] && client.types[t].states) || sel;
       var notYet = master.filter(function(s){ return sel.indexOf(s) === -1; });
-      var parts = [];
-      if(sel.length){ parts.push(joinList(stateNames(sel)) + (sel.length === 1 ? " is" : " are") + " included this period."); }
-      if(notYet.length){ parts.push(joinList(stateNames(notYet)) + (notYet.length === 1 ? " is" : " are") + " not yet included."); }
-      if(!parts.length) return null;
-      return TYPE_LABELS[t] + ": " + parts.join(" ");
+      var total = master.length;
+      if(!total) return null;
+      var stateWord = total === 1 ? "state" : "states";
+      if(!notYet.length){
+        return TYPE_LABELS[t] + ": all " + total + " " + stateWord + " included this period.";
+      }
+      return TYPE_LABELS[t] + ": " + sel.length + " of " + total + " " + stateWord + " included this period. Not yet included: " + joinList(stateNames(notYet)) + ".";
     }).filter(Boolean);
   }
   var STATUS_LABELS = { draft:"Draft", sent:"Sent", failed:"Failed" };
@@ -502,7 +505,7 @@
     var typesText = typeNames.length ? typeNames.join(", ") : "filing";
     var name = f.recipientName || (client.defaultRecipient && client.defaultRecipient.name) || "team";
     var statusLines = jurisdictionStatusLines(f, client);
-    var statusBlock = statusLines.length ? ("\n\n" + statusLines.join("\n")) : "";
+    var statusBlock = statusLines.length ? ("\n\n" + statusLines.map(function(l){ return "- " + l; }).join("\n")) : "";
     return "Hi " + name + " — attached is the " + typesText + " filing status for " + fmtPeriod(f.period) + "." + statusBlock + "\n\nLet us know if anything looks off.\n\nThanks,\nMarc";
   }
 
