@@ -319,6 +319,34 @@
     (list || []).forEach(function(s){ used[s] = true; });
     return US_STATES.filter(function(s){ return !used[s.code]; });
   }
+  var US_STATE_NAMES = {};
+  US_STATES.forEach(function(s){ US_STATE_NAMES[s.code] = s.name; });
+  function stateNames(codes){
+    return (codes || []).map(function(c){ return US_STATE_NAMES[c] || c; });
+  }
+  function joinList(items){
+    if(!items.length) return "";
+    if(items.length === 1) return items[0];
+    if(items.length === 2) return items[0] + " and " + items[1];
+    return items.slice(0, -1).join(", ") + ", and " + items[items.length - 1];
+  }
+  // For each included delivery type: which of its known states are checked for this
+  // delivery ("included this period") vs. known but currently unchecked ("not yet
+  // included"). Feeds the auto-message so the states toggled in the Jurisdictions
+  // section are spelled out in the email text, not just shown as chips.
+  function jurisdictionStatusLines(f, client){
+    if(!client) return [];
+    return includedTypeKeys(f).map(function(t){
+      var sel = f.typeJurisdictions[t] || [];
+      var master = (client.types[t] && client.types[t].states) || sel;
+      var notYet = master.filter(function(s){ return sel.indexOf(s) === -1; });
+      var parts = [];
+      if(sel.length){ parts.push(joinList(stateNames(sel)) + (sel.length === 1 ? " is" : " are") + " included this period."); }
+      if(notYet.length){ parts.push(joinList(stateNames(notYet)) + (notYet.length === 1 ? " is" : " are") + " not yet included."); }
+      if(!parts.length) return null;
+      return TYPE_LABELS[t] + ": " + parts.join(" ");
+    }).filter(Boolean);
+  }
   var STATUS_LABELS = { draft:"Draft", sent:"Sent", failed:"Failed" };
   var TOAST_KEY = "filingdesk_pending_toast_v1";
   var SETTINGS_KEY = "filingdesk_sheets_settings_v1";
@@ -473,7 +501,9 @@
     var typeNames = includedTypeKeys(f).map(function(t){ return TYPE_LABELS[t]; });
     var typesText = typeNames.length ? typeNames.join(", ") : "filing";
     var name = f.recipientName || (client.defaultRecipient && client.defaultRecipient.name) || "team";
-    return "Hi " + name + " — attached is the " + typesText + " filing status for " + fmtPeriod(f.period) + ".\n\nLet us know if anything looks off.\n\nThanks,\nMarc";
+    var statusLines = jurisdictionStatusLines(f, client);
+    var statusBlock = statusLines.length ? ("\n\n" + statusLines.join("\n")) : "";
+    return "Hi " + name + " — attached is the " + typesText + " filing status for " + fmtPeriod(f.period) + "." + statusBlock + "\n\nLet us know if anything looks off.\n\nThanks,\nMarc";
   }
 
   /* ---------------- google sheets sync ---------------- */
@@ -878,6 +908,7 @@
         f.typeJurisdictions[t] = sel;
         delete f.addStateDraft[t];
         syncClientConfig(client);
+        refreshAutoMessage(f, client);
         render();
       }},["+ Add jurisdiction"])
     ]);
@@ -908,15 +939,16 @@
                 var idx = sel.indexOf(st);
                 if(idx === -1){ sel.push(st); } else { sel.splice(idx,1); }
                 f.typeJurisdictions[t] = sel;
+                refreshAutoMessage(f, client);
                 render();
               }}),
               el("span",{},[st])
             ]);
           })) : el("p",{class:"empty-note"},["No jurisdictions set up yet for this delivery type — add one below."]),
           allStates.length ? el("div",{style:"margin-top:6px;"},[
-            el("button",{class:"link-btn", onclick:function(){ f.typeJurisdictions[t] = allStates.slice(); render(); }},["Select all"]),
+            el("button",{class:"link-btn", onclick:function(){ f.typeJurisdictions[t] = allStates.slice(); refreshAutoMessage(f, client); render(); }},["Select all"]),
             el("span",{},[" · "]),
-            el("button",{class:"link-btn", onclick:function(){ f.typeJurisdictions[t] = []; render(); }},["Clear"])
+            el("button",{class:"link-btn", onclick:function(){ f.typeJurisdictions[t] = []; refreshAutoMessage(f, client); render(); }},["Clear"])
           ]) : null,
           renderAddJurisdictionControl(f, client, t)
         ]);
